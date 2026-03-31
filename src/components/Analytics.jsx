@@ -118,6 +118,15 @@ export default function Analytics() {
     return point
   })
 
+  function calcEMA(scores, alpha = 2 / (scores.length + 1)) {
+    if (scores.length === 0) return 0
+    let ema = scores[0]
+    for (let i = 1; i < scores.length; i++) {
+      ema = alpha * scores[i] + (1 - alpha) * ema
+    }
+    return Math.round(ema * 10) / 10
+  }
+
   // --- Average Score Per Exam (bar chart) ---
   const avgData = examNames.map((examName, i) => {
     const scores = scoresByExam[examName].map((s) => s.score)
@@ -125,6 +134,7 @@ export default function Analytics() {
     return {
       exam: examName,
       average: Math.round(avg * 10) / 10,
+      trend: calcEMA(scores),
       papers: scores.length,
       color: COLORS[i % COLORS.length],
     }
@@ -260,10 +270,11 @@ export default function Analytics() {
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
                   <th className="pb-3 pr-4">Exam</th>
-                  <th className="pb-3 pr-4">Papers Done</th>
-                  <th className="pb-3 pr-4">Average</th>
-                  <th className="pb-3 pr-4">Best</th>
-                  <th className="pb-3">Worst</th>
+                  <th className="pb-3 pr-4">Quantity</th>
+                  <th className="pb-3 pr-4">Average (SMA)</th>
+                  <th className="pb-3 pr-4">Trend (EMA)</th>
+                  <th className="pb-3 pr-4">High</th>
+                  <th className="pb-3">Low</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
@@ -278,6 +289,7 @@ export default function Analytics() {
                       </td>
                       <td className="py-2.5 pr-4">{row.papers}</td>
                       <td className="py-2.5 pr-4">{row.average}%</td>
+                      <td className="py-2.5 pr-4 text-indigo-400">{row.trend}%</td>
                       <td className="py-2.5 pr-4 text-emerald-400">{best}%</td>
                       <td className="py-2.5 text-red-400">{worst}%</td>
                     </tr>
