@@ -9,9 +9,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell,
 } from 'recharts'
 
 const COLORS = [
@@ -125,17 +122,6 @@ export default function Analytics() {
     }
   })
 
-  // --- Study Hours Per Subject (bar chart) ---
-  const studyBySubject = {}
-  sessions.forEach((s) => {
-    const name = s.subjects?.name || 'Unknown'
-    studyBySubject[name] = (studyBySubject[name] || 0) + s.duration_minutes
-  })
-  const studyData = Object.entries(studyBySubject).map(([subject, mins]) => ({
-    subject,
-    hours: Math.round((mins / 60) * 10) / 10,
-  }))
-
   // --- Study Hours Over Time (line chart, weekly) ---
   const sessionsByWeek = {}
   sessions.forEach((s) => {
@@ -226,43 +212,6 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
 
-          {/* Average score per exam */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-300 mb-4">
-              Average Score by Exam
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={avgData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="exam"
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickLine={false}
-                  domain={[0, 100]}
-                  tickFormatter={(v) => `${v}%`}
-                />
-                <Tooltip
-                  contentStyle={customTooltipStyle}
-                  formatter={(value, name) => {
-                    if (name === 'average') return [`${value}%`, 'Average']
-                    return [value, name]
-                  }}
-                />
-                <Bar dataKey="average" radius={[4, 4, 0, 0]}>
-                  {avgData.map((entry, i) => (
-                    <Cell key={entry.exam} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
           {/* Score summary table */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 overflow-x-auto">
             <h3 className="text-sm font-semibold text-gray-300 mb-4">
@@ -303,35 +252,6 @@ export default function Analytics() {
 
       {hasSessions && (
         <>
-          {/* Study hours per subject */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-300 mb-4">
-              Total Study Hours by Subject
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={studyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="subject"
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickLine={false}
-                  tickFormatter={(v) => `${v}h`}
-                />
-                <Tooltip
-                  contentStyle={customTooltipStyle}
-                  formatter={(value) => [`${value} hrs`, 'Study Time']}
-                />
-                <Bar dataKey="hours" fill="#34d399" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
           {/* Weekly study breakdown */}
           {weeklyData.length > 1 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
