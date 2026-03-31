@@ -3,7 +3,9 @@ import { supabase } from '../supabaseClient'
 
 export default function ExamCountdown() {
   const [exams, setExams] = useState([])
+  const [subjects, setSubjects] = useState([])
   const [name, setName] = useState('')
+  const [examSubjectId, setExamSubjectId] = useState('')
   const [examDate, setExamDate] = useState('')
   const [examTime, setExamTime] = useState('')
   const [examDuration, setExamDuration] = useState('')
@@ -11,6 +13,7 @@ export default function ExamCountdown() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [editName, setEditName] = useState('')
+  const [editSubjectId, setEditSubjectId] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [editDuration, setEditDuration] = useState('')
@@ -22,27 +25,43 @@ export default function ExamCountdown() {
 
   async function fetchExams() {
     setLoading(true)
-    const { data } = await supabase
+    const { data: examData, error: examErr } = await supabase
       .from('exams')
-      .select('*')
+      .select('*, subjects(name)')
       .order('exam_date')
-    setExams(data || [])
+    let finalExams = examData
+    if (examErr) {
+      const { data: fallback } = await supabase
+        .from('exams')
+        .select('*')
+        .order('exam_date')
+      finalExams = fallback
+    }
+    const { data: subData } = await supabase
+      .from('subjects')
+      .select('*')
+      .order('created_at')
+    setExams(finalExams || [])
+    setSubjects(subData || [])
     setLoading(false)
   }
 
   async function addExam(e) {
     e.preventDefault()
     if (!name.trim() || !examDate) return
-    const { data, error } = await supabase
-      .from('exams')
-      .insert({
-        name: name.trim(),
-        exam_date: examDate,
-        exam_time: examTime || null,
-        duration_minutes: examDuration ? parseInt(examDuration, 10) : null,
-        note: examNote.trim() || null,
-      })
-      .select()
+    const row = {
+      name: name.trim(),
+      exam_date: examDate,
+      exam_time: examTime || null,
+      duration_minutes: examDuration ? parseInt(examDuration, 10) : null,
+      note: examNote.trim() || null,
+    }
+    if (examSubjectId) row.subject_id = examSubjectId
+    let data, error
+    ;({ data, error } = await supabase.from('exams').insert(row).select('*, subjects(name)'))
+    if (error) {
+      ;({ data, error } = await supabase.from('exams').insert(row).select())
+    }
     if (error) {
       alert(`Failed to add exam: ${error.message}`)
       return
@@ -54,6 +73,7 @@ export default function ExamCountdown() {
         )
       )
       setName('')
+      setExamSubjectId('')
       setExamDate('')
       setExamTime('')
       setExamDuration('')
@@ -64,6 +84,7 @@ export default function ExamCountdown() {
   function startEditing(exam) {
     setEditingId(exam.id)
     setEditName(exam.name)
+    setEditSubjectId(exam.subject_id || '')
     setEditDate(exam.exam_date)
     setEditTime(exam.exam_time ? exam.exam_time.slice(0, 5) : '')
     setEditDuration(exam.duration_minutes ? String(exam.duration_minutes) : '')
@@ -77,17 +98,20 @@ export default function ExamCountdown() {
   async function saveEdit(e) {
     e.preventDefault()
     if (!editName.trim() || !editDate) return
-    const { data, error } = await supabase
-      .from('exams')
-      .update({
-        name: editName.trim(),
-        exam_date: editDate,
-        exam_time: editTime || null,
-        duration_minutes: editDuration ? parseInt(editDuration, 10) : null,
-        note: editNote.trim() || null,
-      })
-      .eq('id', editingId)
-      .select()
+    const row = {
+      name: editName.trim(),
+      exam_date: editDate,
+      exam_time: editTime || null,
+      duration_minutes: editDuration ? parseInt(editDuration, 10) : null,
+      note: editNote.trim() || null,
+    }
+    if (editSubjectId !== undefined) row.subject_id = editSubjectId || null
+    let data, error
+    ;({ data, error } = await supabase.from('exams').update(row).eq('id', editingId).select('*, subjects(name)'))
+    if (error) {
+      delete row.subject_id
+      ;({ data, error } = await supabase.from('exams').update(row).eq('id', editingId).select())
+    }
     if (error) {
       alert(`Failed to update exam: ${error.message}`)
       return
@@ -195,6 +219,18 @@ export default function ExamCountdown() {
                     required
                     className={inputClass}
                   />
+                  <select
+                    value={editSubjectId}
+                    onChange={(e) => setEditSubjectId(e.target.value)}
+                    className={`${inputClass} cursor-pointer`}
+                  >
+                    <option value="">No subject</option>
+                    {subjects.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="date"
                     value={editDate}
@@ -256,6 +292,11 @@ export default function ExamCountdown() {
                     {exam.name}
                   </h4>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {exam.subjects?.name && (
+                      <span className="text-xs font-medium text-indigo-400">
+                        {exam.subjects.name}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-400">
                       {formatDate(exam.exam_date)}
                       {formatTime(exam.exam_time) &&
@@ -322,6 +363,18 @@ export default function ExamCountdown() {
             required
             className={inputClass}
           />
+          <select
+            value={examSubjectId}
+            onChange={(e) => setExamSubjectId(e.target.value)}
+            className={`${inputClass} cursor-pointer`}
+          >
+            <option value="">Subject (optional)</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
           <input
             type="date"
             value={examDate}

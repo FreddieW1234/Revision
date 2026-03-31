@@ -24,10 +24,11 @@ create table topics (
   created_at timestamptz default now()
 );
 
--- Past papers for a subject
+-- Past papers for a subject, optionally linked to an exam
 create table past_papers (
   id uuid primary key default gen_random_uuid(),
   subject_id uuid references subjects(id) on delete cascade not null,
+  exam_id uuid references exams(id) on delete set null,
   name text not null,
   score text,
   note text,
@@ -47,6 +48,7 @@ create table study_sessions (
 -- Exams
 create table exams (
   id uuid primary key default gen_random_uuid(),
+  subject_id uuid references subjects(id) on delete cascade,
   name text not null,
   exam_date date not null,
   exam_time time,

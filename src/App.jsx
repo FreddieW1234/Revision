@@ -3,11 +3,13 @@ import { supabaseConfigured } from './supabaseClient'
 import TopicTracker from './components/TopicTracker'
 import StudySessionLogger from './components/StudySessionLogger'
 import ExamCountdown from './components/ExamCountdown'
+import Analytics from './components/Analytics'
 
 const tabs = [
   { id: 'topics', label: 'Topics', icon: '📚' },
   { id: 'sessions', label: 'Sessions', icon: '⏱️' },
   { id: 'exams', label: 'Exams', icon: '📅' },
+  { id: 'analytics', label: 'Analytics', icon: '📊' },
 ]
 
 export default function App() {
@@ -69,6 +71,7 @@ export default function App() {
           {activeTab === 'topics' && <TopicTracker />}
           {activeTab === 'sessions' && <StudySessionLogger />}
           {activeTab === 'exams' && <ExamCountdown />}
+          {activeTab === 'analytics' && <Analytics />}
         </div>
       </main>
     </div>

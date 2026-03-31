@@ -13,12 +13,15 @@ export default function TopicTracker() {
   const [sections, setSections] = useState([])
   const [topics, setTopics] = useState([])
   const [papers, setPapers] = useState([])
+  const [exams, setExams] = useState([])
   const [newTopics, setNewTopics] = useState({})
   const [newSections, setNewSections] = useState({})
   const [newPapers, setNewPapers] = useState({})
   const [showAddSubject, setShowAddSubject] = useState(false)
   const [newSubject, setNewSubject] = useState('')
   const [activeTabs, setActiveTabs] = useState({})
+  const [editingPaperId, setEditingPaperId] = useState(null)
+  const [editPaper, setEditPaper] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -31,20 +34,30 @@ export default function TopicTracker() {
       { data: subData },
       { data: secData },
       { data: topData },
-      { data: paperData },
+      { data: examData },
     ] = await Promise.all([
       supabase.from('subjects').select('*').order('created_at'),
       supabase.from('topic_sections').select('*').order('created_at'),
       supabase.from('topics').select('*').order('created_at'),
-      supabase
+      supabase.from('exams').select('*').order('exam_date'),
+    ])
+    const { data: paperData, error: paperErr } = await supabase
+      .from('past_papers')
+      .select('*, exams(name)')
+      .order('created_at', { ascending: false })
+    let finalPapers = paperData
+    if (paperErr) {
+      const { data: fallback } = await supabase
         .from('past_papers')
         .select('*')
-        .order('created_at', { ascending: false }),
-    ])
+        .order('created_at', { ascending: false })
+      finalPapers = fallback
+    }
     setSubjects(subData || [])
     setSections(secData || [])
     setTopics(topData || [])
-    setPapers(paperData || [])
+    setPapers(finalPapers || [])
+    setExams(examData || [])
     setLoading(false)
   }
 
@@ -124,16 +137,22 @@ export default function TopicTracker() {
     const input = newPapers[subjectId] || {}
     const name = (input.name || '').trim()
     if (!name) return
-    const { data } = await supabase
+    const row = {
+      subject_id: subjectId,
+      name,
+      score: (input.score || '').trim() || null,
+      note: (input.note || '').trim() || null,
+      completed_at: input.date ?? new Date().toISOString().split('T')[0],
+    }
+    if (input.exam_id) row.exam_id = input.exam_id
+    let { data, error } = await supabase
       .from('past_papers')
-      .insert({
-        subject_id: subjectId,
-        name,
-        score: (input.score || '').trim() || null,
-        note: (input.note || '').trim() || null,
-        completed_at: input.date || null,
-      })
-      .select()
+      .insert(row)
+      .select('*, exams(name)')
+    if (error) {
+      delete row.exam_id
+      ;({ data } = await supabase.from('past_papers').insert(row).select())
+    }
     if (data) {
       setPapers((prev) => [data[0], ...prev])
       setNewPapers((prev) => ({ ...prev, [subjectId]: {} }))
@@ -143,6 +162,50 @@ export default function TopicTracker() {
   async function deletePaper(id) {
     await supabase.from('past_papers').delete().eq('id', id)
     setPapers((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  function startEditPaper(paper) {
+    setEditingPaperId(paper.id)
+    setEditPaper({
+      name: paper.name || '',
+      score: paper.score || '',
+      note: paper.note || '',
+      date: paper.completed_at || '',
+      exam_id: paper.exam_id || '',
+    })
+  }
+
+  async function saveEditPaper(e, subjectId) {
+    e.preventDefault()
+    const name = editPaper.name.trim()
+    if (!name) return
+    const row = {
+      name,
+      score: editPaper.score.trim() || null,
+      note: editPaper.note.trim() || null,
+      completed_at: editPaper.date || null,
+    }
+    if (editPaper.exam_id !== undefined) row.exam_id = editPaper.exam_id || null
+    let { data, error } = await supabase
+      .from('past_papers')
+      .update(row)
+      .eq('id', editingPaperId)
+      .select('*, exams(name)')
+    if (error) {
+      delete row.exam_id
+      ;({ data } = await supabase
+        .from('past_papers')
+        .update(row)
+        .eq('id', editingPaperId)
+        .select())
+    }
+    if (data) {
+      setPapers((prev) =>
+        prev.map((p) => (p.id === editingPaperId ? data[0] : p))
+      )
+      setEditingPaperId(null)
+      setEditPaper({})
+    }
   }
 
   function getProgress(subjectId) {
@@ -411,22 +474,44 @@ export default function TopicTracker() {
                 )}
 
                 {/* Past Papers tab */}
-                {tab === 'papers' && (
+                {tab === 'papers' && (() => {
+                  const subjectExams = exams.filter(
+                    (ex) => ex.subject_id === subject.id
+                  )
+                  return (
                   <>
                     <form
                       onSubmit={(e) => addPaper(subject.id, e)}
                       className="space-y-2 mb-4"
                     >
-                      <input
-                        type="text"
-                        value={(newPapers[subject.id] || {}).name || ''}
-                        onChange={(e) =>
-                          updateNewPaper(subject.id, 'name', e.target.value)
-                        }
-                        placeholder="Paper name"
-                        required
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={(newPapers[subject.id] || {}).name || ''}
+                          onChange={(e) =>
+                            updateNewPaper(subject.id, 'name', e.target.value)
+                          }
+                          placeholder="Year"
+                          required
+                          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                        {subjectExams.length > 0 && (
+                          <select
+                            value={(newPapers[subject.id] || {}).exam_id || ''}
+                            onChange={(e) =>
+                              updateNewPaper(subject.id, 'exam_id', e.target.value)
+                            }
+                            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+                          >
+                            <option value="">Select exam</option>
+                            {subjectExams.map((ex) => (
+                              <option key={ex.id} value={ex.id}>
+                                {ex.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -439,7 +524,7 @@ export default function TopicTracker() {
                         />
                         <input
                           type="date"
-                          value={(newPapers[subject.id] || {}).date || ''}
+                          value={(newPapers[subject.id] || {}).date ?? new Date().toISOString().split('T')[0]}
                           onChange={(e) =>
                             updateNewPaper(subject.id, 'date', e.target.value)
                           }
@@ -470,48 +555,144 @@ export default function TopicTracker() {
                     )}
 
                     <ul className="space-y-2">
-                      {subPapers.map((paper) => (
-                        <li
-                          key={paper.id}
-                          className="bg-gray-800/50 rounded-lg px-4 py-3"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm text-gray-200 font-medium truncate">
-                              {paper.name}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {paper.score && (
-                                <span className="text-xs font-medium text-indigo-400">
-                                  {paper.score}
+                      {subPapers.map((paper) =>
+                        editingPaperId === paper.id ? (
+                          <li
+                            key={paper.id}
+                            className="bg-gray-800/50 rounded-lg px-4 py-3"
+                          >
+                            <form onSubmit={(e) => saveEditPaper(e, subject.id)} className="space-y-2">
+                              <input
+                                type="text"
+                                value={editPaper.name}
+                                onChange={(e) =>
+                                  setEditPaper((p) => ({ ...p, name: e.target.value }))
+                                }
+                                placeholder="Year"
+                                required
+                                autoFocus
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              />
+                              {subjectExams.length > 0 && (
+                                <select
+                                  value={editPaper.exam_id}
+                                  onChange={(e) =>
+                                    setEditPaper((p) => ({ ...p, exam_id: e.target.value }))
+                                  }
+                                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+                                >
+                                  <option value="">No exam</option>
+                                  {subjectExams.map((ex) => (
+                                    <option key={ex.id} value={ex.id}>
+                                      {ex.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={editPaper.score}
+                                  onChange={(e) =>
+                                    setEditPaper((p) => ({ ...p, score: e.target.value }))
+                                  }
+                                  placeholder="Score"
+                                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                />
+                                <input
+                                  type="date"
+                                  value={editPaper.date}
+                                  onChange={(e) =>
+                                    setEditPaper((p) => ({ ...p, date: e.target.value }))
+                                  }
+                                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent [color-scheme:dark]"
+                                />
+                              </div>
+                              <input
+                                type="text"
+                                value={editPaper.note}
+                                onChange={(e) =>
+                                  setEditPaper((p) => ({ ...p, note: e.target.value }))
+                                }
+                                placeholder="Notes (optional)"
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="submit"
+                                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingPaperId(null)
+                                    setEditPaper({})
+                                  }}
+                                  className="text-gray-500 hover:text-gray-300 px-3 py-1.5 text-xs transition-colors cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </form>
+                          </li>
+                        ) : (
+                          <li
+                            key={paper.id}
+                            className="bg-gray-800/50 rounded-lg px-4 py-3"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm text-gray-200 font-medium truncate">
+                                {paper.name}
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {paper.score && (
+                                  <span className="text-xs font-medium text-indigo-400">
+                                    {paper.score}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => startEditPaper(paper)}
+                                  className="text-gray-600 hover:text-indigo-400 transition-colors cursor-pointer p-1"
+                                  title="Edit paper"
+                                >
+                                  ✎
+                                </button>
+                                <button
+                                  onClick={() => deletePaper(paper.id)}
+                                  className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
+                                  title="Delete paper"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {paper.exams?.name && (
+                                <span className="text-xs font-medium text-emerald-400">
+                                  {paper.exams.name}
                                 </span>
                               )}
-                              <button
-                                onClick={() => deletePaper(paper.id)}
-                                className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
-                                title="Delete paper"
-                              >
-                                ✕
-                              </button>
+                              {paper.completed_at && (
+                                <span className="text-xs text-gray-500">
+                                  {paper.exams?.name ? '· ' : ''}{formatDate(paper.completed_at)}
+                                </span>
+                              )}
+                              {paper.note && (
+                                <span className="text-xs text-gray-400 truncate">
+                                  {(paper.exams?.name || paper.completed_at) ? '— ' : ''}
+                                  {paper.note}
+                                </span>
+                              )}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {paper.completed_at && (
-                              <span className="text-xs text-gray-500">
-                                {formatDate(paper.completed_at)}
-                              </span>
-                            )}
-                            {paper.note && (
-                              <span className="text-xs text-gray-400 truncate">
-                                {paper.completed_at ? '— ' : ''}
-                                {paper.note}
-                              </span>
-                            )}
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        )
+                      )}
                     </ul>
                   </>
-                )}
+                  )
+                })()}
 
                 <div className="mt-4 pt-3 border-t border-gray-800 flex justify-end">
                   <button
