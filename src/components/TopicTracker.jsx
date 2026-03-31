@@ -385,31 +385,6 @@ export default function TopicTracker() {
                 {/* Topics tab */}
                 {tab === 'topics' && (
                   <>
-                    {/* Add section form */}
-                    <form
-                      onSubmit={(e) => addSection(subject.id, e)}
-                      className="flex gap-1.5 mb-4"
-                    >
-                      <input
-                        type="text"
-                        value={newSections[subject.id] || ''}
-                        onChange={(e) =>
-                          setNewSections((prev) => ({
-                            ...prev,
-                            [subject.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="New section"
-                        className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                      <button
-                        type="submit"
-                        className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
-                      >
-                        +
-                      </button>
-                    </form>
-
                     {/* Sections */}
                     {subSections.map((section) => {
                       const sectionTopics = topics
@@ -440,7 +415,7 @@ export default function TopicTracker() {
                             onSubmit={(e) =>
                               addTopic(subject.id, section.id, e)
                             }
-                            className="flex gap-2 mt-2"
+                            className="flex gap-2 mt-2" style={{ width: '80%' }}
                           >
                             <input
                               type="text"
@@ -470,6 +445,31 @@ export default function TopicTracker() {
                         Add a section to start adding topics.
                       </p>
                     )}
+
+                    {/* Add section form */}
+                    <form
+                      onSubmit={(e) => addSection(subject.id, e)}
+                      className="flex gap-1.5 mt-4"
+                    >
+                      <input
+                        type="text"
+                        value={newSections[subject.id] || ''}
+                        onChange={(e) =>
+                          setNewSections((prev) => ({
+                            ...prev,
+                            [subject.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="New section"
+                        className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
+                      >
+                        Add
+                      </button>
+                    </form>
                   </>
                 )}
 
