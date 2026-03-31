@@ -268,13 +268,13 @@ export default function Analytics() {
             </h3>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="pb-3 pr-4">Exam</th>
-                  <th className="pb-3 pr-4">Quantity</th>
-                  <th className="pb-3 pr-4">Average (SMA)</th>
-                  <th className="pb-3 pr-4">Trend (EMA)</th>
-                  <th className="pb-3 pr-4">High</th>
-                  <th className="pb-3">Low</th>
+                <tr className="text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="pb-3 text-left" style={{ width: '35%' }}>Exam</th>
+                  <th className="pb-3 text-right" style={{ width: '13%' }}>Quantity</th>
+                  <th className="pb-3 text-right" style={{ width: '13%' }}>Average (SMA)</th>
+                  <th className="pb-3 text-right" style={{ width: '13%' }}>Trend (EMA)</th>
+                  <th className="pb-3 text-right" style={{ width: '13%' }}>High</th>
+                  <th className="pb-3 text-right" style={{ width: '13%' }}>Low</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
@@ -284,14 +284,14 @@ export default function Analytics() {
                   const worst = Math.min(...scores)
                   return (
                     <tr key={row.exam} className="border-t border-gray-800">
-                      <td className="py-2.5 pr-4 font-medium text-white">
+                      <td className="py-2.5 font-medium text-white truncate text-left">
                         {row.exam}
                       </td>
-                      <td className="py-2.5 pr-4">{row.papers}</td>
-                      <td className="py-2.5 pr-4">{row.average}%</td>
-                      <td className="py-2.5 pr-4 text-indigo-400">{row.trend}%</td>
-                      <td className="py-2.5 pr-4 text-emerald-400">{best}%</td>
-                      <td className="py-2.5 text-red-400">{worst}%</td>
+                      <td className="py-2.5 text-right">{row.papers}</td>
+                      <td className="py-2.5 text-right">{row.average}%</td>
+                      <td className="py-2.5 text-right text-indigo-400">{row.trend}%</td>
+                      <td className="py-2.5 text-right text-emerald-400">{best}%</td>
+                      <td className="py-2.5 text-right text-red-400">{worst}%</td>
                     </tr>
                   )
                 })}
