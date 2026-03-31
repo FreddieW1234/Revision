@@ -128,17 +128,19 @@ export default function Analytics() {
   }
 
   // --- Average Score Per Exam (bar chart) ---
-  const avgData = examNames.map((examName, i) => {
-    const scores = scoresByExam[examName].map((s) => s.score)
-    const avg = scores.reduce((a, b) => a + b, 0) / scores.length
-    return {
-      exam: examName,
-      average: Math.round(avg * 10) / 10,
-      trend: calcEMA(scores),
-      papers: scores.length,
-      color: COLORS[i % COLORS.length],
-    }
-  })
+  const avgData = examNames
+    .map((examName, i) => {
+      const scores = scoresByExam[examName].map((s) => s.score)
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+      return {
+        exam: examName,
+        average: Math.round(avg * 10) / 10,
+        trend: calcEMA(scores),
+        papers: scores.length,
+        color: COLORS[i % COLORS.length],
+      }
+    })
+    .sort((a, b) => a.exam.localeCompare(b.exam))
 
   // --- Study Hours Over Time (line chart, weekly) ---
   const sessionsByWeek = {}
@@ -264,7 +266,7 @@ export default function Analytics() {
           {/* Score summary table */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 overflow-x-auto">
             <h3 className="text-sm font-semibold text-gray-300 mb-4">
-              Past Paper Summary
+              Summary
             </h3>
             <table className="w-full text-sm">
               <thead>
