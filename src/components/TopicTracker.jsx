@@ -322,55 +322,30 @@ export default function TopicTracker() {
                 {/* Topics tab */}
                 {tab === 'topics' && (
                   <>
-                    {/* Add section + topic forms side by side */}
-                    <div className="flex gap-2 mb-4">
-                      <form
-                        onSubmit={(e) => addSection(subject.id, e)}
-                        className="flex gap-1.5 flex-1"
+                    {/* Add section form */}
+                    <form
+                      onSubmit={(e) => addSection(subject.id, e)}
+                      className="flex gap-1.5 mb-4"
+                    >
+                      <input
+                        type="text"
+                        value={newSections[subject.id] || ''}
+                        onChange={(e) =>
+                          setNewSections((prev) => ({
+                            ...prev,
+                            [subject.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="New section"
+                        className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
                       >
-                        <input
-                          type="text"
-                          value={newSections[subject.id] || ''}
-                          onChange={(e) =>
-                            setNewSections((prev) => ({
-                              ...prev,
-                              [subject.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="New section"
-                          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                        <button
-                          type="submit"
-                          className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
-                        >
-                          +
-                        </button>
-                      </form>
-                      <form
-                        onSubmit={(e) => addTopic(subject.id, null, e)}
-                        className="flex gap-1.5 flex-1"
-                      >
-                        <input
-                          type="text"
-                          value={newTopics[subject.id] || ''}
-                          onChange={(e) =>
-                            setNewTopics((prev) => ({
-                              ...prev,
-                              [subject.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="New topic"
-                          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                        <button
-                          type="submit"
-                          className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
-                        >
-                          +
-                        </button>
-                      </form>
-                    </div>
+                        +
+                      </button>
+                    </form>
 
                     {/* Sections */}
                     {subSections.map((section) => {
@@ -427,29 +402,11 @@ export default function TopicTracker() {
                       )
                     })}
 
-                    {/* Unsectioned topics */}
-                    {unsectionedTopics.length > 0 && (
-                      <div className={subSections.length > 0 ? 'mt-4 pt-3 border-t border-gray-800' : ''}>
-                        {subSections.length > 0 && (
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            General
-                          </h4>
-                        )}
-
-                        <TopicList
-                          topics={unsectionedTopics}
-                          onUpdateStatus={updateTopicStatus}
-                          onDelete={deleteTopic}
-                        />
-                      </div>
+                    {subSections.length === 0 && (
+                      <p className="text-gray-600 text-sm text-center py-2">
+                        Add a section to start adding topics.
+                      </p>
                     )}
-
-                    {subSections.length === 0 &&
-                      unsectionedTopics.length === 0 && (
-                        <p className="text-gray-600 text-sm text-center py-2">
-                          No topics yet.
-                        </p>
-                      )}
                   </>
                 )}
 

@@ -149,70 +149,13 @@ export default function ExamCountdown() {
     <div>
       <h2 className="text-2xl font-bold text-white mb-6">Exam Countdown</h2>
 
-      <form
-        onSubmit={addExam}
-        className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-8"
-      >
-        <h3 className="text-sm font-semibold text-gray-300 mb-4">
-          Add an Exam
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Exam name"
-            required
-            className={inputClass}
-          />
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            min={todayStr}
-            required
-            className={`${inputClass} [color-scheme:dark]`}
-          />
-          <input
-            type="time"
-            value={examTime}
-            onChange={(e) => setExamTime(e.target.value)}
-            className={`${inputClass} [color-scheme:dark]`}
-          />
-          <input
-            type="number"
-            min="1"
-            value={examDuration}
-            onChange={(e) => setExamDuration(e.target.value)}
-            placeholder="Length in minutes (optional)"
-            className={inputClass}
-          />
-        </div>
-        <div className="mt-3">
-          <input
-            type="text"
-            value={examNote}
-            onChange={(e) => setExamNote(e.target.value)}
-            placeholder="Notes (optional)"
-            className={`w-full ${inputClass}`}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!name.trim() || !examDate}
-          className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-        >
-          Add Exam
-        </button>
-      </form>
-
       {exams.length === 0 && (
         <p className="text-gray-500 text-center py-12">
-          No exams added yet. Add one above to start the countdown.
+          No exams added yet. Add one below to start the countdown.
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-3 mb-8">
         {exams.map((exam) => {
           const days = getDaysRemaining(exam.exam_date)
           const isPast = days < 0
@@ -362,6 +305,63 @@ export default function ExamCountdown() {
           )
         })}
       </div>
+
+      <form
+        onSubmit={addExam}
+        className="bg-gray-900 border border-gray-800 rounded-xl p-5"
+      >
+        <h3 className="text-sm font-semibold text-gray-300 mb-4">
+          Add an Exam
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Exam name"
+            required
+            className={inputClass}
+          />
+          <input
+            type="date"
+            value={examDate}
+            onChange={(e) => setExamDate(e.target.value)}
+            min={todayStr}
+            required
+            className={`${inputClass} [color-scheme:dark]`}
+          />
+          <input
+            type="time"
+            value={examTime}
+            onChange={(e) => setExamTime(e.target.value)}
+            className={`${inputClass} [color-scheme:dark]`}
+          />
+          <input
+            type="number"
+            min="1"
+            value={examDuration}
+            onChange={(e) => setExamDuration(e.target.value)}
+            placeholder="Length in minutes (optional)"
+            className={inputClass}
+          />
+        </div>
+        <div className="mt-3">
+          <input
+            type="text"
+            value={examNote}
+            onChange={(e) => setExamNote(e.target.value)}
+            placeholder="Notes (optional)"
+            className={`w-full ${inputClass}`}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={!name.trim() || !examDate}
+          className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+        >
+          Add Exam
+        </button>
+      </form>
     </div>
   )
 }
