@@ -263,42 +263,87 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
 
-          {/* Score summary table */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 overflow-x-auto">
+          {/* Score summary - table on desktop */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
             <h3 className="text-sm font-semibold text-gray-300 mb-4">
               Summary
             </h3>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="pb-3 text-left" style={{ width: '35%' }}>Exam</th>
-                  <th className="pb-3 text-right" style={{ width: '13%' }}>Quantity</th>
-                  <th className="pb-3 text-right" style={{ width: '13%' }}>Average (SMA)</th>
-                  <th className="pb-3 text-right" style={{ width: '13%' }}>Trend (EMA)</th>
-                  <th className="pb-3 text-right" style={{ width: '13%' }}>High</th>
-                  <th className="pb-3 text-right" style={{ width: '13%' }}>Low</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-300">
-                {avgData.map((row) => {
-                  const scores = scoresByExam[row.exam].map((s) => s.score)
-                  const best = Math.max(...scores)
-                  const worst = Math.min(...scores)
-                  return (
-                    <tr key={row.exam} className="border-t border-gray-800">
-                      <td className="py-2.5 font-medium text-white truncate text-left">
-                        {row.exam}
-                      </td>
-                      <td className="py-2.5 text-right">{row.papers}</td>
-                      <td className="py-2.5 text-right">{row.average}%</td>
-                      <td className="py-2.5 text-right text-indigo-400">{row.trend}%</td>
-                      <td className="py-2.5 text-right text-emerald-400">{best}%</td>
-                      <td className="py-2.5 text-right text-red-400">{worst}%</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 uppercase tracking-wider">
+                    <th className="pb-3 text-left" style={{ width: '35%' }}>Exam</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>Quantity</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>Average (SMA)</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>Trend (EMA)</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>High</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>Low</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-300">
+                  {avgData.map((row) => {
+                    const scores = scoresByExam[row.exam].map((s) => s.score)
+                    const best = Math.max(...scores)
+                    const worst = Math.min(...scores)
+                    return (
+                      <tr key={row.exam} className="border-t border-gray-800">
+                        <td className="py-2.5 font-medium text-white truncate text-left">
+                          {row.exam}
+                        </td>
+                        <td className="py-2.5 text-right">{row.papers}</td>
+                        <td className="py-2.5 text-right">{row.average}%</td>
+                        <td className="py-2.5 text-right text-indigo-400">{row.trend}%</td>
+                        <td className="py-2.5 text-right text-emerald-400">{best}%</td>
+                        <td className="py-2.5 text-right text-red-400">{worst}%</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="sm:hidden space-y-3">
+              {avgData.map((row) => {
+                const scores = scoresByExam[row.exam].map((s) => s.score)
+                const best = Math.max(...scores)
+                const worst = Math.min(...scores)
+                return (
+                  <div
+                    key={row.exam}
+                    className="bg-gray-800/50 rounded-lg px-4 py-3"
+                  >
+                    <h4 className="text-sm font-medium text-white mb-2">
+                      {row.exam}
+                    </h4>
+                    <div className="grid grid-cols-3 gap-y-2 gap-x-4 text-xs">
+                      <div>
+                        <span className="text-gray-500 block">Qty</span>
+                        <span className="text-gray-300">{row.papers}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">SMA</span>
+                        <span className="text-gray-300">{row.average}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">EMA</span>
+                        <span className="text-indigo-400">{row.trend}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">High</span>
+                        <span className="text-emerald-400">{best}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">Low</span>
+                        <span className="text-red-400">{worst}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </>
       )}
