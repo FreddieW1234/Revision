@@ -93,7 +93,7 @@ export default function StudySessionLogger() {
     ])
     setSubjects(subData || [])
     setSessions(sesData || [])
-    if (subData?.length && !subjectId) setSubjectId(subData[0].id)
+    
     setLoading(false)
   }
 
@@ -238,7 +238,7 @@ export default function StudySessionLogger() {
         <h3 className="text-sm font-semibold text-gray-300 mb-4">
           Log a Session
         </h3>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-wrap gap-3">
           <select
             value={subjectId}
             onChange={(e) => setSubjectId(e.target.value)}
@@ -265,7 +265,7 @@ export default function StudySessionLogger() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional)"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <button
