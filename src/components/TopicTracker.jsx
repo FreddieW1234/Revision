@@ -10,9 +10,11 @@ const STATUS_COLORS = {
 
 export default function TopicTracker() {
   const [subjects, setSubjects] = useState([])
+  const [sections, setSections] = useState([])
   const [topics, setTopics] = useState([])
   const [papers, setPapers] = useState([])
   const [newTopics, setNewTopics] = useState({})
+  const [newSections, setNewSections] = useState({})
   const [newPapers, setNewPapers] = useState({})
   const [showAddSubject, setShowAddSubject] = useState(false)
   const [newSubject, setNewSubject] = useState('')
@@ -25,16 +27,22 @@ export default function TopicTracker() {
 
   async function fetchAll() {
     setLoading(true)
-    const [{ data: subData }, { data: topData }, { data: paperData }] =
-      await Promise.all([
-        supabase.from('subjects').select('*').order('created_at'),
-        supabase.from('topics').select('*').order('created_at'),
-        supabase
-          .from('past_papers')
-          .select('*')
-          .order('created_at', { ascending: false }),
-      ])
+    const [
+      { data: subData },
+      { data: secData },
+      { data: topData },
+      { data: paperData },
+    ] = await Promise.all([
+      supabase.from('subjects').select('*').order('created_at'),
+      supabase.from('topic_sections').select('*').order('created_at'),
+      supabase.from('topics').select('*').order('created_at'),
+      supabase
+        .from('past_papers')
+        .select('*')
+        .order('created_at', { ascending: false }),
+    ])
     setSubjects(subData || [])
+    setSections(secData || [])
     setTopics(topData || [])
     setPapers(paperData || [])
     setLoading(false)
@@ -55,21 +63,47 @@ export default function TopicTracker() {
   async function deleteSubject(id) {
     await supabase.from('subjects').delete().eq('id', id)
     setSubjects((prev) => prev.filter((s) => s.id !== id))
+    setSections((prev) => prev.filter((s) => s.subject_id !== id))
     setTopics((prev) => prev.filter((t) => t.subject_id !== id))
     setPapers((prev) => prev.filter((p) => p.subject_id !== id))
   }
 
-  async function addTopic(subjectId, e) {
+  async function addSection(subjectId, e) {
     e.preventDefault()
-    const name = (newTopics[subjectId] || '').trim()
+    const name = (newSections[subjectId] || '').trim()
     if (!name) return
     const { data } = await supabase
-      .from('topics')
+      .from('topic_sections')
       .insert({ subject_id: subjectId, name })
       .select()
     if (data) {
+      setSections((prev) => [...prev, data[0]])
+      setNewSections((prev) => ({ ...prev, [subjectId]: '' }))
+    }
+  }
+
+  async function deleteSection(id) {
+    await supabase.from('topic_sections').delete().eq('id', id)
+    setSections((prev) => prev.filter((s) => s.id !== id))
+    setTopics((prev) => prev.filter((t) => t.section_id !== id))
+  }
+
+  async function addTopic(subjectId, sectionId, e) {
+    e.preventDefault()
+    const key = sectionId || subjectId
+    const name = (newTopics[key] || '').trim()
+    if (!name) return
+    const { data } = await supabase
+      .from('topics')
+      .insert({
+        subject_id: subjectId,
+        section_id: sectionId || null,
+        name,
+      })
+      .select()
+    if (data) {
       setTopics((prev) => [...prev, data[0]])
-      setNewTopics((prev) => ({ ...prev, [subjectId]: '' }))
+      setNewTopics((prev) => ({ ...prev, [key]: '' }))
     }
   }
 
@@ -155,7 +189,7 @@ export default function TopicTracker() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-white">Topic Tracker</h2>
         <button
           onClick={() => setShowAddSubject(!showAddSubject)}
@@ -164,6 +198,30 @@ export default function TopicTracker() {
           + Add Subject
         </button>
       </div>
+
+      {topics.length > 0 && (() => {
+        const totalTopics = topics.length
+        const confidentTopics = topics.filter((t) => t.status === 'Confident').length
+        const overallPercent = Math.round((confidentTopics / totalTopics) * 100)
+        return (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-gray-400 font-medium">
+                Overall Progress
+              </span>
+              <span className="text-xs text-gray-400 font-medium">
+                {confidentTopics}/{totalTopics} confident — {overallPercent}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-800 rounded-full h-2.5">
+              <div
+                className="bg-indigo-500 h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${overallPercent}%` }}
+              />
+            </div>
+          </div>
+        )
+      })()}
 
       {showAddSubject && (
         <form onSubmit={addSubject} className="mb-6">
@@ -207,7 +265,12 @@ export default function TopicTracker() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedSubjects.map((subject) => {
           const progress = getProgress(subject.id)
-          const subTopics = topics.filter((t) => t.subject_id === subject.id)
+          const subSections = sections.filter(
+            (s) => s.subject_id === subject.id
+          )
+          const unsectionedTopics = topics
+            .filter((t) => t.subject_id === subject.id && !t.section_id)
+            .sort((a, b) => a.name.localeCompare(b.name))
           const subPapers = papers.filter((p) => p.subject_id === subject.id)
           const tab = getActiveTab(subject.id)
 
@@ -259,72 +322,134 @@ export default function TopicTracker() {
                 {/* Topics tab */}
                 {tab === 'topics' && (
                   <>
-                    <form
-                      onSubmit={(e) => addTopic(subject.id, e)}
-                      className="flex gap-2 mb-4"
-                    >
-                      <input
-                        type="text"
-                        value={newTopics[subject.id] || ''}
-                        onChange={(e) =>
-                          setNewTopics((prev) => ({
-                            ...prev,
-                            [subject.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="New topic"
-                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                      <button
-                        type="submit"
-                        className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                    {/* Add section + topic forms side by side */}
+                    <div className="flex gap-2 mb-4">
+                      <form
+                        onSubmit={(e) => addSection(subject.id, e)}
+                        className="flex gap-1.5 flex-1"
                       >
-                        Add
-                      </button>
-                    </form>
-
-                    {subTopics.length === 0 && (
-                      <p className="text-gray-600 text-sm text-center py-4">
-                        No topics yet.
-                      </p>
-                    )}
-
-                    <ul className="space-y-2">
-                      {subTopics.map((topic) => (
-                        <li
-                          key={topic.id}
-                          className="bg-gray-800/50 rounded-lg px-3 py-2.5"
+                        <input
+                          type="text"
+                          value={newSections[subject.id] || ''}
+                          onChange={(e) =>
+                            setNewSections((prev) => ({
+                              ...prev,
+                              [subject.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="New section"
+                          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm text-gray-200 truncate min-w-0">
-                              {topic.name}
-                            </span>
+                          +
+                        </button>
+                      </form>
+                      <form
+                        onSubmit={(e) => addTopic(subject.id, null, e)}
+                        className="flex gap-1.5 flex-1"
+                      >
+                        <input
+                          type="text"
+                          value={newTopics[subject.id] || ''}
+                          onChange={(e) =>
+                            setNewTopics((prev) => ({
+                              ...prev,
+                              [subject.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="New topic"
+                          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
+                        >
+                          +
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Sections */}
+                    {subSections.map((section) => {
+                      const sectionTopics = topics
+                        .filter((t) => t.section_id === section.id)
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                      return (
+                        <div key={section.id} className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+                              {section.name}
+                            </h4>
                             <button
-                              onClick={() => deleteTopic(topic.id)}
-                              className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1 shrink-0"
-                              title="Delete topic"
+                              onClick={() => deleteSection(section.id)}
+                              className="text-gray-700 hover:text-red-400 transition-colors cursor-pointer p-0.5 text-xs"
+                              title="Delete section"
                             >
                               ✕
                             </button>
                           </div>
-                          <div className="mt-1.5">
-                            <select
-                              value={topic.status}
+
+                          <TopicList
+                            topics={sectionTopics}
+                            onUpdateStatus={updateTopicStatus}
+                            onDelete={deleteTopic}
+                          />
+
+                          <form
+                            onSubmit={(e) =>
+                              addTopic(subject.id, section.id, e)
+                            }
+                            className="flex gap-2 mt-2"
+                          >
+                            <input
+                              type="text"
+                              value={newTopics[section.id] || ''}
                               onChange={(e) =>
-                                updateTopicStatus(topic.id, e.target.value)
+                                setNewTopics((prev) => ({
+                                  ...prev,
+                                  [section.id]: e.target.value,
+                                }))
                               }
-                              className={`text-xs font-medium rounded-md px-2.5 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full ${STATUS_COLORS[topic.status]}`}
+                              placeholder="New topic"
+                              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                            <button
+                              type="submit"
+                              className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                             >
-                              {STATUS_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                              Add
+                            </button>
+                          </form>
+                        </div>
+                      )
+                    })}
+
+                    {/* Unsectioned topics */}
+                    {unsectionedTopics.length > 0 && (
+                      <div className={subSections.length > 0 ? 'mt-4 pt-3 border-t border-gray-800' : ''}>
+                        {subSections.length > 0 && (
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            General
+                          </h4>
+                        )}
+
+                        <TopicList
+                          topics={unsectionedTopics}
+                          onUpdateStatus={updateTopicStatus}
+                          onDelete={deleteTopic}
+                        />
+                      </div>
+                    )}
+
+                    {subSections.length === 0 &&
+                      unsectionedTopics.length === 0 && (
+                        <p className="text-gray-600 text-sm text-center py-2">
+                          No topics yet.
+                        </p>
+                      )}
                   </>
                 )}
 
@@ -445,6 +570,42 @@ export default function TopicTracker() {
         })}
       </div>
     </div>
+  )
+}
+
+function TopicList({ topics, onUpdateStatus, onDelete }) {
+  if (topics.length === 0) return null
+  return (
+    <ul className="space-y-1.5">
+      {topics.map((topic) => (
+        <li
+          key={topic.id}
+          className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-2"
+        >
+          <span className="text-sm text-gray-200 truncate min-w-0 flex-1">
+            {topic.name}
+          </span>
+          <select
+            value={topic.status}
+            onChange={(e) => onUpdateStatus(topic.id, e.target.value)}
+            className={`text-xs font-medium rounded-md px-2 py-1 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 shrink-0 ${STATUS_COLORS[topic.status]}`}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => onDelete(topic.id)}
+            className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-0.5 shrink-0"
+            title="Delete topic"
+          >
+            ✕
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

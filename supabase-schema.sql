@@ -5,10 +5,19 @@ create table subjects (
   created_at timestamptz default now()
 );
 
--- Topics within a subject
+-- Sections within a subject (e.g. Pure, Mechanics, Stats)
+create table topic_sections (
+  id uuid primary key default gen_random_uuid(),
+  subject_id uuid references subjects(id) on delete cascade not null,
+  name text not null,
+  created_at timestamptz default now()
+);
+
+-- Topics within a section (or directly under a subject if section_id is null)
 create table topics (
   id uuid primary key default gen_random_uuid(),
   subject_id uuid references subjects(id) on delete cascade not null,
+  section_id uuid references topic_sections(id) on delete cascade,
   name text not null,
   status text not null default 'Not Started'
     check (status in ('Not Started', 'In Progress', 'Confident')),
@@ -48,12 +57,14 @@ create table exams (
 
 -- Enable Row Level Security (allow all for anon key — no auth required)
 alter table subjects enable row level security;
+alter table topic_sections enable row level security;
 alter table topics enable row level security;
 alter table study_sessions enable row level security;
 alter table past_papers enable row level security;
 alter table exams enable row level security;
 
 create policy "Allow all on subjects" on subjects for all using (true) with check (true);
+create policy "Allow all on topic_sections" on topic_sections for all using (true) with check (true);
 create policy "Allow all on topics" on topics for all using (true) with check (true);
 create policy "Allow all on study_sessions" on study_sessions for all using (true) with check (true);
 create policy "Allow all on past_papers" on past_papers for all using (true) with check (true);
