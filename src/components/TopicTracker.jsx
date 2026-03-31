@@ -193,7 +193,7 @@ export default function TopicTracker() {
         <h2 className="text-2xl font-bold text-white">Topic Tracker</h2>
         <button
           onClick={() => setShowAddSubject(!showAddSubject)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          className="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
           + Add Subject
         </button>
@@ -526,6 +526,14 @@ export default function TopicTracker() {
           )
         })}
       </div>
+
+      {/* Mobile add subject button */}
+      <button
+        onClick={() => setShowAddSubject(!showAddSubject)}
+        className="md:hidden w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+      >
+        + Add Subject
+      </button>
     </div>
   )
 }
