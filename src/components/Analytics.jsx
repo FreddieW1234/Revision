@@ -30,6 +30,14 @@ function formatDate(dateStr) {
   return `${day}/${month}`
 }
 
+function formatDuration(minutes) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m} mins`
+  if (m === 0) return `${h} hr${h > 1 ? 's' : ''}`
+  return `${h} hr${h > 1 ? 's' : ''} ${m} mins`
+}
+
 export default function Analytics() {
   const [subjects, setSubjects] = useState([])
   const [papers, setPapers] = useState([])
@@ -157,9 +165,40 @@ export default function Analytics() {
     fontSize: '12px',
   }
 
+  const totalMins = sessions.reduce((sum, s) => sum + s.duration_minutes, 0)
+
+  function getSubjectHours(subId) {
+    const total = sessions
+      .filter((s) => s.subject_id === subId)
+      .reduce((sum, s) => sum + s.duration_minutes, 0)
+    return formatDuration(total)
+  }
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-white mb-6">Analytics</h2>
+
+      {hasSessions && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+          <div className="bg-indigo-900/30 border border-indigo-800/50 rounded-xl p-4">
+            <p className="text-xs text-indigo-400 font-medium mb-1">Total Study Time</p>
+            <p className="text-lg font-bold text-white">{formatDuration(totalMins)}</p>
+          </div>
+          {subjects.map((sub) => (
+            <div
+              key={sub.id}
+              className="bg-gray-900 border border-gray-800 rounded-xl p-4"
+            >
+              <p className="text-xs text-gray-400 font-medium mb-1 truncate">
+                {sub.name}
+              </p>
+              <p className="text-lg font-bold text-white">
+                {getSubjectHours(sub.id)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!hasScores && !hasSessions && (
         <p className="text-gray-500 text-center py-12">

@@ -209,27 +209,6 @@ export default function StudySessionLogger() {
     <div>
       <h2 className="text-2xl font-bold text-white mb-6">Study Sessions</h2>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
-        <div className="bg-indigo-900/30 border border-indigo-800/50 rounded-xl p-4">
-          <p className="text-xs text-indigo-400 font-medium mb-1">Total</p>
-          <p className="text-lg font-bold text-white">{totalFormatted}</p>
-        </div>
-        {subjects.map((sub) => (
-          <div
-            key={sub.id}
-            className="bg-gray-900 border border-gray-800 rounded-xl p-4"
-          >
-            <p className="text-xs text-gray-400 font-medium mb-1 truncate">
-              {sub.name}
-            </p>
-            <p className="text-lg font-bold text-white">
-              {getTotalHours(sub.id)}
-            </p>
-          </div>
-        ))}
-      </div>
-
       {/* Log form */}
       <form
         onSubmit={logSession}
