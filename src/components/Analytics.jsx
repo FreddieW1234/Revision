@@ -276,8 +276,8 @@ export default function Analytics() {
                   <tr className="text-xs text-gray-500 uppercase tracking-wider">
                     <th className="pb-3 text-left" style={{ width: '35%' }}>Exam</th>
                     <th className="pb-3 text-right" style={{ width: '13%' }}>Quantity</th>
-                    <th className="pb-3 text-right" style={{ width: '13%' }}>Average (SMA)</th>
-                    <th className="pb-3 text-right" style={{ width: '13%' }}>Trend (EMA)</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>SMA</th>
+                    <th className="pb-3 text-right" style={{ width: '13%' }}>EMA</th>
                     <th className="pb-3 text-right" style={{ width: '13%' }}>High</th>
                     <th className="pb-3 text-right" style={{ width: '13%' }}>Low</th>
                   </tr>
@@ -293,7 +293,7 @@ export default function Analytics() {
                           {row.exam}
                         </td>
                         <td className="py-2.5 text-right">{row.papers}</td>
-                        <td className="py-2.5 text-right">{row.average}%</td>
+                        <td className="py-2.5 text-right text-amber-400">{row.average}%</td>
                         <td className="py-2.5 text-right text-indigo-400">{row.trend}%</td>
                         <td className="py-2.5 text-right text-emerald-400">{best}%</td>
                         <td className="py-2.5 text-right text-red-400">{worst}%</td>
@@ -325,7 +325,7 @@ export default function Analytics() {
                       </div>
                       <div>
                         <span className="text-gray-500 block">SMA</span>
-                        <span className="text-gray-300">{row.average}%</span>
+                        <span className="text-amber-400">{row.average}%</span>
                       </div>
                       <div>
                         <span className="text-gray-500 block">EMA</span>
