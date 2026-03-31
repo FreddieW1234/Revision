@@ -1,16 +1,81 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
+const VALID_MINS = [0, 15, 30, 45]
+
+function formatDuration(minutes) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m} mins`
+  if (m === 0) return `${h} hr${h > 1 ? 's' : ''}`
+  return `${h} hr${h > 1 ? 's' : ''} ${m} mins`
+}
+
+function DurationInput({ hours, mins, onHoursChange, onMinsChange, error, size = 'normal' }) {
+  const py = size === 'small' ? 'py-2' : 'py-2.5'
+  const base = `bg-gray-800 border rounded-lg px-3 ${py} text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500`
+  const borderColor = error ? 'border-red-500/60' : 'border-gray-700'
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="0"
+          max="23"
+          value={hours}
+          onChange={(e) => onHoursChange(e.target.value)}
+          placeholder="0"
+          className={`w-16 ${base} ${borderColor}`}
+        />
+        <span className="text-sm text-gray-400 shrink-0">hrs</span>
+        <input
+          type="number"
+          min="0"
+          max="45"
+          step="15"
+          value={mins}
+          onChange={(e) => onMinsChange(e.target.value)}
+          placeholder="0"
+          className={`w-16 ${base} ${borderColor}`}
+        />
+        <span className="text-sm text-gray-400 shrink-0">mins</span>
+      </div>
+      {error && (
+        <p className="text-xs text-red-400 mt-1">{error}</p>
+      )}
+    </div>
+  )
+}
+
+function validateMins(mins) {
+  if (mins === '' || mins === undefined) return null
+  const val = parseInt(mins, 10)
+  if (isNaN(val)) return 'Must be a number'
+  if (!VALID_MINS.includes(val)) return 'Minutes must be 0, 15, 30, or 45'
+  return null
+}
+
+function getTotalMinutes(hours, mins) {
+  const h = parseInt(hours, 10) || 0
+  const m = parseInt(mins, 10) || 0
+  return h * 60 + m
+}
+
 export default function StudySessionLogger() {
   const [subjects, setSubjects] = useState([])
   const [sessions, setSessions] = useState([])
   const [subjectId, setSubjectId] = useState('')
-  const [duration, setDuration] = useState('')
+  const [hours, setHours] = useState('')
+  const [mins, setMins] = useState('')
+  const [minsError, setMinsError] = useState(null)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [editSubjectId, setEditSubjectId] = useState('')
-  const [editDuration, setEditDuration] = useState('')
+  const [editHours, setEditHours] = useState('')
+  const [editMins, setEditMins] = useState('')
+  const [editMinsError, setEditMinsError] = useState(null)
   const [editNote, setEditNote] = useState('')
 
   useEffect(() => {
@@ -32,43 +97,66 @@ export default function StudySessionLogger() {
     setLoading(false)
   }
 
+  function handleMinsChange(val) {
+    setMins(val)
+    setMinsError(validateMins(val))
+  }
+
+  function handleEditMinsChange(val) {
+    setEditMins(val)
+    setEditMinsError(validateMins(val))
+  }
+
   async function logSession(e) {
     e.preventDefault()
-    if (!subjectId || !duration) return
+    const err = validateMins(mins)
+    if (err) { setMinsError(err); return }
+    const total = getTotalMinutes(hours, mins)
+    if (!subjectId || total <= 0) return
     const { data } = await supabase
       .from('study_sessions')
       .insert({
         subject_id: subjectId,
-        duration_minutes: parseInt(duration, 10),
+        duration_minutes: total,
         note: note.trim() || null,
       })
       .select('*, subjects(name)')
     if (data) {
       setSessions((prev) => [data[0], ...prev])
-      setDuration('')
+      setHours('')
+      setMins('')
+      setMinsError(null)
       setNote('')
     }
   }
 
   function startEditing(session) {
+    const h = Math.floor(session.duration_minutes / 60)
+    const m = session.duration_minutes % 60
     setEditingId(session.id)
     setEditSubjectId(session.subject_id)
-    setEditDuration(String(session.duration_minutes))
+    setEditHours(h > 0 ? String(h) : '')
+    setEditMins(m > 0 ? String(m) : '')
+    setEditMinsError(null)
     setEditNote(session.note || '')
   }
 
   function cancelEditing() {
     setEditingId(null)
+    setEditMinsError(null)
   }
 
   async function saveEdit(e) {
     e.preventDefault()
-    if (!editSubjectId || !editDuration) return
+    const err = validateMins(editMins)
+    if (err) { setEditMinsError(err); return }
+    const total = getTotalMinutes(editHours, editMins)
+    if (!editSubjectId || total <= 0) return
     const { data } = await supabase
       .from('study_sessions')
       .update({
         subject_id: editSubjectId,
-        duration_minutes: parseInt(editDuration, 10),
+        duration_minutes: total,
         note: editNote.trim() || null,
       })
       .eq('id', editingId)
@@ -78,6 +166,7 @@ export default function StudySessionLogger() {
         prev.map((s) => (s.id === editingId ? data[0] : s))
       )
       setEditingId(null)
+      setEditMinsError(null)
     }
   }
 
@@ -88,17 +177,16 @@ export default function StudySessionLogger() {
   }
 
   function getTotalHours(subId) {
-    const mins = sessions
+    const total = sessions
       .filter((s) => s.subject_id === subId)
       .reduce((sum, s) => sum + s.duration_minutes, 0)
-    return (mins / 60).toFixed(1)
+    return formatDuration(total)
   }
 
   function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
-      year: 'numeric',
     })
   }
 
@@ -113,9 +201,9 @@ export default function StudySessionLogger() {
     return <LoadingSkeleton />
   }
 
-  const totalAllHours = (
-    sessions.reduce((sum, s) => sum + s.duration_minutes, 0) / 60
-  ).toFixed(1)
+  const totalMins = sessions.reduce((sum, s) => sum + s.duration_minutes, 0)
+  const totalFormatted = formatDuration(totalMins)
+  const canSubmit = subjectId && getTotalMinutes(hours, mins) > 0 && !minsError
 
   return (
     <div>
@@ -124,10 +212,8 @@ export default function StudySessionLogger() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
         <div className="bg-indigo-900/30 border border-indigo-800/50 rounded-xl p-4">
-          <p className="text-xs text-indigo-400 font-medium mb-1">
-            Total Hours
-          </p>
-          <p className="text-2xl font-bold text-white">{totalAllHours}</p>
+          <p className="text-xs text-indigo-400 font-medium mb-1">Total</p>
+          <p className="text-lg font-bold text-white">{totalFormatted}</p>
         </div>
         {subjects.map((sub) => (
           <div
@@ -137,11 +223,8 @@ export default function StudySessionLogger() {
             <p className="text-xs text-gray-400 font-medium mb-1 truncate">
               {sub.name}
             </p>
-            <p className="text-2xl font-bold text-white">
+            <p className="text-lg font-bold text-white">
               {getTotalHours(sub.id)}
-              <span className="text-sm font-normal text-gray-500 ml-1">
-                hrs
-              </span>
             </p>
           </div>
         ))}
@@ -155,7 +238,7 @@ export default function StudySessionLogger() {
         <h3 className="text-sm font-semibold text-gray-300 mb-4">
           Log a Session
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={subjectId}
             onChange={(e) => setSubjectId(e.target.value)}
@@ -170,26 +253,24 @@ export default function StudySessionLogger() {
               </option>
             ))}
           </select>
-          <input
-            type="number"
-            min="1"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="Minutes"
-            required
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <DurationInput
+            hours={hours}
+            mins={mins}
+            onHoursChange={setHours}
+            onMinsChange={handleMinsChange}
+            error={minsError}
           />
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional)"
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <button
           type="submit"
-          disabled={!subjectId || !duration}
+          disabled={!canSubmit}
           className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
           Log Session
@@ -214,7 +295,7 @@ export default function StudySessionLogger() {
               onSubmit={saveEdit}
               className="bg-gray-900 border border-indigo-500/50 rounded-lg px-4 py-3"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-2">
                 <select
                   value={editSubjectId}
                   onChange={(e) => setEditSubjectId(e.target.value)}
@@ -226,23 +307,22 @@ export default function StudySessionLogger() {
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min="1"
-                  value={editDuration}
-                  onChange={(e) => setEditDuration(e.target.value)}
-                  placeholder="Minutes"
-                  required
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <input
-                  type="text"
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Note (optional)"
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <DurationInput
+                  hours={editHours}
+                  mins={editMins}
+                  onHoursChange={setEditHours}
+                  onMinsChange={handleEditMinsChange}
+                  error={editMinsError}
+                  size="small"
                 />
               </div>
+              <input
+                type="text"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="Note (optional)"
+                className="w-full mb-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -271,7 +351,7 @@ export default function StudySessionLogger() {
                       {session.subjects?.name || 'Unknown'}
                     </span>
                     <span className="text-xs text-indigo-400 font-medium">
-                      {session.duration_minutes} min
+                      {formatDuration(session.duration_minutes)}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500">
