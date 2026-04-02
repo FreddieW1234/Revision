@@ -1,7 +1,132 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 
 const VALID_MINS = [0, 15, 30, 45]
+
+function roundTo15(totalMins) {
+  const rounded = Math.round(totalMins / 15) * 15
+  return rounded < 15 && totalMins > 0 ? 15 : rounded
+}
+
+function padZero(n) {
+  return String(n).padStart(2, '0')
+}
+
+function Stopwatch({ onLog }) {
+  const [running, setRunning] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [stopped, setStopped] = useState(false)
+  const startRef = useRef(null)
+  const intervalRef = useRef(null)
+
+  function start() {
+    startRef.current = Date.now() - elapsed
+    setRunning(true)
+    setStopped(false)
+    intervalRef.current = setInterval(() => {
+      setElapsed(Date.now() - startRef.current)
+    }, 200)
+  }
+
+  function stop() {
+    clearInterval(intervalRef.current)
+    setRunning(false)
+    setStopped(true)
+  }
+
+  function reset() {
+    clearInterval(intervalRef.current)
+    setRunning(false)
+    setStopped(false)
+    setElapsed(0)
+  }
+
+  function handleLog() {
+    const totalMins = Math.floor(elapsed / 60000)
+    const rounded = roundTo15(totalMins)
+    onLog(rounded)
+    reset()
+  }
+
+  useEffect(() => {
+    return () => clearInterval(intervalRef.current)
+  }, [])
+
+  const totalSecs = Math.floor(elapsed / 1000)
+  const h = Math.floor(totalSecs / 3600)
+  const m = Math.floor((totalSecs % 3600) / 60)
+  const s = totalSecs % 60
+
+  const totalMins = Math.floor(elapsed / 60000)
+  const rounded = roundTo15(totalMins)
+  const roundedH = Math.floor(rounded / 60)
+  const roundedM = rounded % 60
+
+  const isIdle = !running && !stopped
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 mb-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-300">
+          Time a Session
+        </h3>
+        <span
+          className={`text-lg tabular-nums transition-colors ${
+            running
+              ? 'text-emerald-400'
+              : stopped
+                ? 'text-amber-400'
+                : 'text-gray-500'
+          }`}
+          style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 300, letterSpacing: '0.05em' }}
+        >
+          {padZero(h)}:{padZero(m)}:{padZero(s)}
+        </span>
+
+        <div className="flex gap-2">
+          {isIdle && (
+            <button
+              onClick={start}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Start
+            </button>
+          )}
+          {running && (
+            <button
+              onClick={stop}
+              className="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Stop
+            </button>
+          )}
+          {stopped && (
+            <>
+              <button
+                onClick={start}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              >
+                Resume
+              </button>
+              <button
+                onClick={handleLog}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Log {roundedH > 0 ? `${roundedH}h ` : ''}{roundedM}m
+              </button>
+              <button
+                onClick={reset}
+                className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              >
+                Discard
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60)
@@ -218,6 +343,16 @@ export default function StudySessionLogger() {
   return (
     <div>
       <h2 className="text-2xl font-bold text-white mb-6">Study Sessions</h2>
+
+      <Stopwatch
+        onLog={(rounded) => {
+          const h = Math.floor(rounded / 60)
+          const m = rounded % 60
+          setHours(h > 0 ? String(h) : '')
+          setMins(m > 0 ? String(m) : '0')
+          setMinsError(null)
+        }}
+      />
 
       {/* Log form */}
       <form
