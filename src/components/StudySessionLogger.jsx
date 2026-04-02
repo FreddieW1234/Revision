@@ -12,10 +12,55 @@ function padZero(n) {
   return String(n).padStart(2, '0')
 }
 
+function TimerRing({ elapsed }) {
+  const radius = 182
+  const stroke = 15
+  const cx = 208
+  const cy = 208
+  const circumference = 2 * Math.PI * radius
+
+  const totalMins = elapsed / 60000
+  const progress = (totalMins % 60) / 60
+  const offset = circumference - progress * circumference
+
+  const angle = progress * 360 - 90
+  const rad = (angle * Math.PI) / 180
+  const dotX = cx + radius * Math.cos(rad)
+  const dotY = cy + radius * Math.sin(rad)
+
+  return (
+    <svg width="416" height="416" viewBox="0 0 416 416" className="max-w-[70vmin] max-h-[70vmin]">
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius}
+        fill="none"
+        stroke="url(#ringGradient)"
+        strokeWidth={stroke}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
+        className="transition-[stroke-dashoffset] duration-200"
+      />
+      {elapsed > 0 && (
+        <circle cx={dotX} cy={dotY} r="7.5" fill="#818cf8" opacity="0.9" />
+      )}
+      <defs>
+        <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#818cf8" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
 function Stopwatch({ onLog }) {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [stopped, setStopped] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const startRef = useRef(null)
   const intervalRef = useRef(null)
 
@@ -46,11 +91,25 @@ function Stopwatch({ onLog }) {
     const rounded = roundTo15(totalMins)
     onLog(rounded)
     reset()
+    setFullscreen(false)
   }
 
   useEffect(() => {
     return () => clearInterval(intervalRef.current)
   }, [])
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+        e.preventDefault()
+        if (running) stop()
+        else start()
+      }
+      if (e.key === 'Escape' && fullscreen) setFullscreen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [running, fullscreen, elapsed])
 
   const totalSecs = Math.floor(elapsed / 1000)
   const h = Math.floor(totalSecs / 3600)
@@ -63,6 +122,79 @@ function Stopwatch({ onLog }) {
   const roundedM = rounded % 60
 
   const isIdle = !running && !stopped
+
+  const timerFont = { fontFamily: '"Outfit", sans-serif', fontWeight: 300, letterSpacing: '0.05em' }
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-gray-950 flex flex-col items-center justify-center">
+        <button
+          onClick={() => setFullscreen(false)}
+          className="absolute top-5 right-5 text-gray-600 hover:text-gray-300 transition-colors cursor-pointer text-2xl"
+          title="Exit fullscreen"
+        >
+          ✕
+        </button>
+
+        <div className="relative flex items-center justify-center">
+          <TimerRing elapsed={elapsed} />
+          <span
+            className={`absolute text-6xl sm:text-7xl tabular-nums transition-colors ${
+              running
+                ? 'text-white'
+                : stopped
+                  ? 'text-amber-400'
+                  : 'text-gray-500'
+            }`}
+            style={timerFont}
+          >
+            {padZero(h)}:{padZero(m)}:{padZero(s)}
+          </span>
+        </div>
+
+        <div className="flex gap-3 mt-10">
+          {isIdle && (
+            <button
+              onClick={start}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-full text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Start
+            </button>
+          )}
+          {running && (
+            <button
+              onClick={stop}
+              className="bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-full text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Stop
+            </button>
+          )}
+          {stopped && (
+            <>
+              <button
+                onClick={handleLog}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-6 py-3 rounded-full text-sm font-medium transition-colors cursor-pointer"
+              >
+                Log {roundedH > 0 ? `${roundedH}h ` : ''}{roundedM}m
+              </button>
+              <button
+                onClick={start}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-full text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Resume
+              </button>
+              <button
+                onClick={() => { reset(); setFullscreen(false) }}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-6 py-3 rounded-full text-sm font-medium transition-colors cursor-pointer"
+              >
+                Discard
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 mb-6">
@@ -78,12 +210,12 @@ function Stopwatch({ onLog }) {
                 ? 'text-amber-400'
                 : 'text-gray-500'
           }`}
-          style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 300, letterSpacing: '0.05em' }}
+          style={timerFont}
         >
           {padZero(h)}:{padZero(m)}:{padZero(s)}
         </span>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {isIdle && (
             <button
               onClick={start}
@@ -103,25 +235,32 @@ function Stopwatch({ onLog }) {
           {stopped && (
             <>
               <button
-                onClick={start}
+                onClick={reset}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
-                Resume
+                Discard
               </button>
               <button
                 onClick={handleLog}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
                 Log {roundedH > 0 ? `${roundedH}h ` : ''}{roundedM}m
               </button>
               <button
-                onClick={reset}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                onClick={start}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
-                Discard
+                Resume
               </button>
             </>
           )}
+          <button
+            onClick={() => setFullscreen(true)}
+            className="text-gray-600 hover:text-gray-300 transition-colors cursor-pointer p-1 ml-1"
+            title="Fullscreen timer"
+          >
+            ⛶
+          </button>
         </div>
       </div>
     </div>
