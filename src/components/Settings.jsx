@@ -35,7 +35,7 @@ export default function Settings({ settings, onUpdate }) {
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
                     }`}
                   >
-                    {mode === 'auto' ? 'Auto (time-based)' : mode === 'dark' ? 'Always Dark' : 'Always Light'}
+                    {mode === 'auto' ? 'Schedule' : mode === 'dark' ? 'Always Dark' : 'Always Light'}
                   </button>
                 ))}
               </div>
