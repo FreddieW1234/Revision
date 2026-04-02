@@ -77,6 +77,8 @@ export default function StudySessionLogger() {
   const [editMins, setEditMins] = useState('')
   const [editMinsError, setEditMinsError] = useState(null)
   const [editNote, setEditNote] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
 
   useEffect(() => {
     fetchAll()
@@ -133,12 +135,15 @@ export default function StudySessionLogger() {
   function startEditing(session) {
     const h = Math.floor(session.duration_minutes / 60)
     const m = session.duration_minutes % 60
+    const dt = new Date(session.created_at)
     setEditingId(session.id)
     setEditSubjectId(session.subject_id)
     setEditHours(h > 0 ? String(h) : '')
     setEditMins(m > 0 ? String(m) : '')
     setEditMinsError(null)
     setEditNote(session.note || '')
+    setEditDate(dt.toISOString().split('T')[0])
+    setEditTime(dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
   }
 
   function cancelEditing() {
@@ -152,13 +157,18 @@ export default function StudySessionLogger() {
     if (err) { setEditMinsError(err); return }
     const total = getTotalMinutes(editHours, editMins)
     if (!editSubjectId || total <= 0) return
+    const row = {
+      subject_id: editSubjectId,
+      duration_minutes: total,
+      note: editNote.trim() || null,
+    }
+    if (editDate) {
+      const time = editTime || '00:00'
+      row.created_at = new Date(`${editDate}T${time}`).toISOString()
+    }
     const { data } = await supabase
       .from('study_sessions')
-      .update({
-        subject_id: editSubjectId,
-        duration_minutes: total,
-        note: editNote.trim() || null,
-      })
+      .update(row)
       .eq('id', editingId)
       .select('*, subjects(name)')
     if (data) {
@@ -274,7 +284,7 @@ export default function StudySessionLogger() {
               onSubmit={saveEdit}
               className="bg-gray-900 border border-indigo-500/50 rounded-lg px-4 py-3"
             >
-              <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 <select
                   value={editSubjectId}
                   onChange={(e) => setEditSubjectId(e.target.value)}
@@ -295,13 +305,27 @@ export default function StudySessionLogger() {
                   size="small"
                 />
               </div>
-              <input
-                type="text"
-                value={editNote}
-                onChange={(e) => setEditNote(e.target.value)}
-                placeholder="Note (optional)"
-                className="w-full mb-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="flex flex-wrap gap-2 mb-2">
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+                <input
+                  type="time"
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
+                />
+                <input
+                  type="text"
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  placeholder="Note (optional)"
+                  className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
               <div className="flex gap-2">
                 <button
                   type="submit"

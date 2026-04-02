@@ -3,3 +3,79 @@
 html, body {
   background-color: #030712;
 }
+
+/* ===== Light Theme (7am – 8pm) ===== */
+
+html.light-theme,
+html.light-theme body {
+  background-color: #f8fafc !important;
+}
+
+/* Backgrounds */
+html.light-theme .bg-gray-950 { background-color: #f8fafc !important; }
+html.light-theme .bg-gray-900 { background-color: #ffffff !important; }
+html.light-theme .bg-gray-800 { background-color: #f1f5f9 !important; }
+html.light-theme .bg-gray-700 { background-color: #e2e8f0 !important; }
+html.light-theme .bg-gray-800\/50 { background-color: rgb(241 245 249 / 0.5) !important; }
+
+/* Text */
+html.light-theme .text-white { color: #0f172a !important; }
+html.light-theme .text-gray-100 { color: #1e293b !important; }
+html.light-theme .text-gray-200 { color: #334155 !important; }
+html.light-theme .text-gray-300 { color: #475569 !important; }
+html.light-theme .text-gray-400 { color: #64748b !important; }
+html.light-theme .text-gray-500 { color: #94a3b8 !important; }
+html.light-theme .text-gray-600 { color: #94a3b8 !important; }
+
+/* Borders */
+html.light-theme .border-gray-800 { border-color: #e2e8f0 !important; }
+html.light-theme .border-gray-700 { border-color: #cbd5e1 !important; }
+
+/* Placeholders */
+html.light-theme .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+
+/* Hover states */
+html.light-theme .hover\:bg-gray-800:hover { background-color: #e2e8f0 !important; }
+html.light-theme .hover\:bg-gray-600:hover { background-color: #cbd5e1 !important; }
+html.light-theme .hover\:text-gray-200:hover { color: #334155 !important; }
+html.light-theme .hover\:text-gray-300:hover { color: #475569 !important; }
+
+/* Accent text – boost contrast on white */
+html.light-theme .text-indigo-400 { color: #4f46e5 !important; }
+html.light-theme .text-emerald-400 { color: #059669 !important; }
+html.light-theme .text-red-400 { color: #dc2626 !important; }
+html.light-theme .text-amber-400 { color: #d97706 !important; }
+html.light-theme .text-red-400\/70 { color: rgb(220 38 38 / 0.7) !important; }
+
+html.light-theme .hover\:text-red-400:hover { color: #dc2626 !important; }
+html.light-theme .hover\:text-indigo-400:hover { color: #4f46e5 !important; }
+
+/* Special backgrounds */
+html.light-theme .bg-indigo-900\/30 { background-color: rgb(224 231 255 / 0.5) !important; }
+html.light-theme .border-indigo-800\/50 { border-color: rgb(165 180 252 / 0.5) !important; }
+html.light-theme .border-indigo-500\/50 { border-color: rgb(99 102 241 / 0.4) !important; }
+
+/* Exam urgency */
+html.light-theme .bg-red-950\/10 { background-color: rgb(254 226 226 / 0.3) !important; }
+html.light-theme .bg-red-950\/20 { background-color: rgb(254 226 226 / 0.4) !important; }
+html.light-theme .border-red-500\/40 { border-color: rgb(239 68 68 / 0.3) !important; }
+html.light-theme .border-red-500\/60 { border-color: rgb(239 68 68 / 0.4) !important; }
+html.light-theme .bg-red-900\/60 { background-color: rgb(254 202 202 / 0.4) !important; }
+html.light-theme .bg-red-900\/50 { background-color: rgb(254 202 202 / 0.3) !important; }
+
+/* Topic status colors */
+html.light-theme .bg-amber-900\/60 { background-color: rgb(252 211 77 / 0.3) !important; }
+html.light-theme .text-amber-300 { color: #b45309 !important; }
+html.light-theme .bg-emerald-900\/60 { background-color: rgb(167 243 208 / 0.4) !important; }
+html.light-theme .text-emerald-300 { color: #047857 !important; }
+html.light-theme .text-red-300 { color: #dc2626 !important; }
+
+/* Input color scheme */
+html.light-theme .\[color-scheme\:dark\] { color-scheme: light !important; }
+
+/* Recharts tooltip */
+html.light-theme .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}

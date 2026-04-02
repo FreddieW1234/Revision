@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
-export default function ExamCountdown() {
+export default function ExamCountdown({ urgencyDays = 14 }) {
   const [exams, setExams] = useState([])
   const [subjects, setSubjects] = useState([])
   const [name, setName] = useState('')
@@ -183,7 +183,7 @@ export default function ExamCountdown() {
         {exams.map((exam) => {
           const days = getDaysRemaining(exam.exam_date)
           const isPast = days < 0
-          const isUrgent = days >= 0 && days <= 14
+          const isUrgent = days >= 0 && days <= urgencyDays
           const isToday = days === 0
 
           let borderClass = 'border-gray-800'

@@ -9,6 +9,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  BarChart,
+  Bar,
 } from 'recharts'
 
 const COLORS = [
@@ -157,6 +159,14 @@ export default function Analytics() {
 
   const weekKeys = Object.keys(sessionsByWeek).sort()
   const allSessionSubjects = [...new Set(sessions.map((s) => s.subjects?.name || 'Unknown'))]
+  const weeklyTotalData = weekKeys.map((week) => {
+    const totalMinsWeek = Object.values(sessionsByWeek[week]).reduce((a, b) => a + b, 0)
+    return {
+      week: formatDate(week),
+      hours: Math.round((totalMinsWeek / 60) * 10) / 10,
+    }
+  })
+
   const weeklyData = weekKeys.map((week) => {
     const point = { week: formatDate(week) }
     allSessionSubjects.forEach((sub) => {
@@ -350,7 +360,38 @@ export default function Analytics() {
 
       {hasSessions && (
         <>
-          {/* Weekly study breakdown */}
+          {/* Total hours per week */}
+          {weeklyTotalData.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <h3 className="text-sm font-semibold text-gray-300 mb-4">
+                Total Hours Per Week
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={weeklyTotalData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis
+                    dataKey="week"
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(v) => `${v}h`}
+                  />
+                  <Tooltip
+                    contentStyle={customTooltipStyle}
+                    formatter={(value) => [`${value} hrs`, 'Total']}
+                  />
+                  <Bar dataKey="hours" fill="#34d399" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Weekly study breakdown by subject */}
           {weeklyData.length > 1 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <h3 className="text-sm font-semibold text-gray-300 mb-4">

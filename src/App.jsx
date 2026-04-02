@@ -1,19 +1,78 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabaseConfigured } from './supabaseClient'
 import TopicTracker from './components/TopicTracker'
 import StudySessionLogger from './components/StudySessionLogger'
 import ExamCountdown from './components/ExamCountdown'
 import Analytics from './components/Analytics'
+import Settings from './components/Settings'
 
 const tabs = [
   { id: 'topics', label: 'Topics', icon: '📚' },
   { id: 'sessions', label: 'Sessions', icon: '⏱️' },
   { id: 'exams', label: 'Exams', icon: '📅' },
   { id: 'analytics', label: 'Analytics', icon: '📊' },
+  { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
+
+const DEFAULT_SETTINGS = {
+  themeMode: 'auto',
+  lightStart: 7,
+  lightEnd: 20,
+  examUrgencyDays: 14,
+}
+
+function loadSettings() {
+  try {
+    const stored = localStorage.getItem('revision-settings')
+    if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+  } catch {}
+  return { ...DEFAULT_SETTINGS }
+}
+
+function resolveTheme(settings) {
+  if (settings.themeMode === 'dark') return 'dark'
+  if (settings.themeMode === 'light') return 'light'
+  const hour = new Date().getHours()
+  return hour >= settings.lightStart && hour < settings.lightEnd ? 'light' : 'dark'
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('topics')
+  const [settings, setSettings] = useState(loadSettings)
+  const [theme, setTheme] = useState(() => resolveTheme(loadSettings()))
+
+  function updateSettings(patch) {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem('revision-settings', JSON.stringify(next))
+      return next
+    })
+  }
+
+  useEffect(() => {
+    setTheme(resolveTheme(settings))
+    if (settings.themeMode === 'auto') {
+      const interval = setInterval(
+        () => setTheme(resolveTheme(settings)),
+        60000
+      )
+      return () => clearInterval(interval)
+    }
+  }, [settings])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (theme === 'light') {
+      root.classList.add('light-theme')
+      document.body.style.backgroundColor = '#f8fafc'
+      if (meta) meta.setAttribute('content', '#f8fafc')
+    } else {
+      root.classList.remove('light-theme')
+      document.body.style.backgroundColor = '#030712'
+      if (meta) meta.setAttribute('content', '#030712')
+    }
+  }, [theme])
 
   if (!supabaseConfigured) {
     return <SetupScreen />
@@ -70,8 +129,13 @@ export default function App() {
         <div className="w-full">
           {activeTab === 'topics' && <TopicTracker />}
           {activeTab === 'sessions' && <StudySessionLogger />}
-          {activeTab === 'exams' && <ExamCountdown />}
+          {activeTab === 'exams' && (
+            <ExamCountdown urgencyDays={settings.examUrgencyDays} />
+          )}
           {activeTab === 'analytics' && <Analytics />}
+          {activeTab === 'settings' && (
+            <Settings settings={settings} onUpdate={updateSettings} />
+          )}
         </div>
       </main>
     </div>
