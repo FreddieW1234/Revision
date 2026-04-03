@@ -343,12 +343,12 @@ export default function TopicTracker() {
               className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden"
             >
               <div className="p-5">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-semibold text-white truncate">
                     {subject.name}
                   </h3>
-                  <span className="text-xs text-gray-500">
-                    {progress.confident}/{progress.total} confident
+                  <span className="text-xs text-gray-500 shrink-0">
+                    {progress.confident}/{progress.total} confident — {progress.percent}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
