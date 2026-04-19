@@ -22,6 +22,7 @@ export default function TopicTracker() {
   const [activeTabs, setActiveTabs] = useState({})
   const [editingPaperId, setEditingPaperId] = useState(null)
   const [editPaper, setEditPaper] = useState({})
+  const [showExamSelect, setShowExamSelect] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -495,7 +496,16 @@ export default function TopicTracker() {
                           required
                           className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
-                        {subjectExams.length > 0 && (
+                        {subjectExams.length > 0 && !showExamSelect[subject.id] && (
+                          <button
+                            type="button"
+                            onClick={() => setShowExamSelect((prev) => ({ ...prev, [subject.id]: true }))}
+                            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-colors cursor-pointer shrink-0"
+                          >
+                            + Exam
+                          </button>
+                        )}
+                        {subjectExams.length > 0 && showExamSelect[subject.id] && (
                           <select
                             value={(newPapers[subject.id] || {}).exam_id || ''}
                             onChange={(e) =>

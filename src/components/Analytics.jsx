@@ -189,6 +189,34 @@ export default function Analytics() {
 
   const totalMins = sessions.reduce((sum, s) => sum + s.duration_minutes, 0)
 
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todayMins = sessions
+    .filter((s) => s.created_at?.startsWith(todayStr))
+    .reduce((sum, s) => sum + s.duration_minutes, 0)
+
+  const allDaysSorted = sessions
+    .map((s) => s.created_at?.split('T')[0])
+    .filter(Boolean)
+    .sort()
+  const firstDay = allDaysSorted[0]
+  let totalDaysSpan = 1
+  if (firstDay) {
+    const start = new Date(firstDay)
+    start.setHours(0, 0, 0, 0)
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    totalDaysSpan = Math.max(1, Math.round((now - start) / (1000 * 60 * 60 * 24)) + 1)
+  }
+  const avgDailyMins = Math.round(totalMins / totalDaysSpan)
+
+  const last7 = new Date()
+  last7.setDate(last7.getDate() - 6)
+  last7.setHours(0, 0, 0, 0)
+  const last7Mins = sessions
+    .filter((s) => new Date(s.created_at) >= last7)
+    .reduce((sum, s) => sum + s.duration_minutes, 0)
+  const avg7DayMins = Math.round(last7Mins / 7)
+
   function getSubjectHours(subId) {
     const total = sessions
       .filter((s) => s.subject_id === subId)
@@ -205,6 +233,18 @@ export default function Analytics() {
           <div className="bg-indigo-900/30 border border-indigo-800/50 rounded-xl p-4">
             <p className="text-xs text-indigo-400 font-medium mb-1">Total Study Time</p>
             <p className="text-lg font-bold text-white">{formatDuration(totalMins)}</p>
+          </div>
+          <div className="bg-emerald-900/30 border border-emerald-800/50 rounded-xl p-4">
+            <p className="text-xs text-emerald-400 font-medium mb-1">Today</p>
+            <p className="text-lg font-bold text-white">{todayMins > 0 ? formatDuration(todayMins) : '0 mins'}</p>
+          </div>
+          <div className="bg-amber-900/30 border border-amber-800/50 rounded-xl p-4">
+            <p className="text-xs text-amber-400 font-medium mb-1">Daily Avg (7d)</p>
+            <p className="text-lg font-bold text-white">{formatDuration(avg7DayMins)}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p className="text-xs text-gray-400 font-medium mb-1">Daily Avg since {firstDay ? formatDate(firstDay) : '—'}</p>
+            <p className="text-lg font-bold text-white">{formatDuration(avgDailyMins)}</p>
           </div>
           {subjects.map((sub) => (
             <div

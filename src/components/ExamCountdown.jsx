@@ -18,6 +18,7 @@ export default function ExamCountdown({ urgencyDays = 14 }) {
   const [editTime, setEditTime] = useState('')
   const [editDuration, setEditDuration] = useState('')
   const [editNote, setEditNote] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
 
   useEffect(() => {
     fetchExams()
@@ -69,7 +70,7 @@ export default function ExamCountdown({ urgencyDays = 14 }) {
     if (data) {
       setExams((prev) =>
         [...prev, data[0]].sort(
-          (a, b) => new Date(a.exam_date) - new Date(b.exam_date)
+          (a, b) => new Date(`${a.exam_date}T${a.exam_time || '00:00'}`) - new Date(`${b.exam_date}T${b.exam_time || '00:00'}`)
         )
       )
       setName('')
@@ -120,7 +121,7 @@ export default function ExamCountdown({ urgencyDays = 14 }) {
       setExams((prev) =>
         prev
           .map((ex) => (ex.id === editingId ? data[0] : ex))
-          .sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date))
+          .sort((a, b) => new Date(`${a.exam_date}T${a.exam_time || '00:00'}`) - new Date(`${b.exam_date}T${b.exam_time || '00:00'}`))
       )
       setEditingId(null)
     }
@@ -180,7 +181,11 @@ export default function ExamCountdown({ urgencyDays = 14 }) {
       )}
 
       <div className="space-y-3 mb-8">
-        {exams.map((exam) => {
+        {[...exams].sort((a, b) => {
+          const dtA = new Date(`${a.exam_date}T${a.exam_time || '00:00'}`)
+          const dtB = new Date(`${b.exam_date}T${b.exam_time || '00:00'}`)
+          return dtA - dtB
+        }).map((exam) => {
           const days = getDaysRemaining(exam.exam_date)
           const isPast = days < 0
           const isUrgent = days >= 0 && days <= urgencyDays
@@ -347,74 +352,93 @@ export default function ExamCountdown({ urgencyDays = 14 }) {
         })}
       </div>
 
-      <form
-        onSubmit={addExam}
-        className="bg-gray-900 border border-gray-800 rounded-xl p-5"
-      >
-        <h3 className="text-sm font-semibold text-gray-300 mb-4">
-          Add an Exam
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Exam name"
-            required
-            className={inputClass}
-          />
-          <select
-            value={examSubjectId}
-            onChange={(e) => setExamSubjectId(e.target.value)}
-            className={`${inputClass} cursor-pointer`}
-          >
-            <option value="">Subject (optional)</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            min={todayStr}
-            required
-            className={`${inputClass} [color-scheme:dark]`}
-          />
-          <input
-            type="time"
-            value={examTime}
-            onChange={(e) => setExamTime(e.target.value)}
-            className={`${inputClass} [color-scheme:dark]`}
-          />
-          <input
-            type="number"
-            min="1"
-            value={examDuration}
-            onChange={(e) => setExamDuration(e.target.value)}
-            placeholder="Length in minutes (optional)"
-            className={inputClass}
-          />
-        </div>
-        <div className="mt-3">
-          <input
-            type="text"
-            value={examNote}
-            onChange={(e) => setExamNote(e.target.value)}
-            placeholder="Notes (optional)"
-            className={`w-full ${inputClass}`}
-          />
-        </div>
+      {!showAddForm ? (
         <button
-          type="submit"
-          disabled={!name.trim() || !examDate}
-          className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          onClick={() => setShowAddForm(true)}
+          className="w-full bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl px-5 py-4 text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer"
         >
-          Add Exam
+          + Add an Exam
         </button>
-      </form>
+      ) : (
+        <form
+          onSubmit={(e) => { addExam(e); setShowAddForm(false) }}
+          className="bg-gray-900 border border-gray-800 rounded-xl p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-300">
+              Add an Exam
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="text-gray-600 hover:text-gray-300 transition-colors cursor-pointer text-sm"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Exam name"
+              required
+              autoFocus
+              className={inputClass}
+            />
+            <select
+              value={examSubjectId}
+              onChange={(e) => setExamSubjectId(e.target.value)}
+              className={`${inputClass} cursor-pointer`}
+            >
+              <option value="">Subject (optional)</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              min={todayStr}
+              required
+              className={`${inputClass} [color-scheme:dark]`}
+            />
+            <input
+              type="time"
+              value={examTime}
+              onChange={(e) => setExamTime(e.target.value)}
+              className={`${inputClass} [color-scheme:dark]`}
+            />
+            <input
+              type="number"
+              min="1"
+              value={examDuration}
+              onChange={(e) => setExamDuration(e.target.value)}
+              placeholder="Length in minutes (optional)"
+              className={inputClass}
+            />
+          </div>
+          <div className="mt-3">
+            <input
+              type="text"
+              value={examNote}
+              onChange={(e) => setExamNote(e.target.value)}
+              placeholder="Notes (optional)"
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!name.trim() || !examDate}
+            className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          >
+            Add Exam
+          </button>
+        </form>
+      )}
     </div>
   )
 }
