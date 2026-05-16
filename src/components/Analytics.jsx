@@ -144,13 +144,18 @@ export default function Analytics() {
     })
     .sort((a, b) => a.exam.localeCompare(b.exam))
 
-  // --- Study Hours Over Time (line chart, weekly) ---
+  // --- Study Hours Over Time (line chart, weekly, Mon-Sun) ---
+  function getMonday(d) {
+    const dt = new Date(d)
+    const day = dt.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    dt.setDate(dt.getDate() + diff)
+    return dt.toISOString().split('T')[0]
+  }
+
   const sessionsByWeek = {}
   sessions.forEach((s) => {
-    const d = new Date(s.created_at)
-    const weekStart = new Date(d)
-    weekStart.setDate(d.getDate() - d.getDay() + 1)
-    const key = weekStart.toISOString().split('T')[0]
+    const key = getMonday(s.created_at)
     const name = s.subjects?.name || 'Unknown'
     if (!sessionsByWeek[key]) sessionsByWeek[key] = {}
     sessionsByWeek[key][name] =
@@ -217,6 +222,29 @@ export default function Analytics() {
     .reduce((sum, s) => sum + s.duration_minutes, 0)
   const avg7DayMins = Math.round(last7Mins / 7)
 
+  // --- PR: best single day ---
+  const minsByDay = {}
+  sessions.forEach((s) => {
+    const day = s.created_at?.split('T')[0]
+    if (day) minsByDay[day] = (minsByDay[day] || 0) + s.duration_minutes
+  })
+  const prMins = Math.max(0, ...Object.values(minsByDay))
+  const prDay = Object.entries(minsByDay).find(([, v]) => v === prMins)?.[0]
+
+  // --- Daily hours for last 14 days ---
+  const dailyData = []
+  const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const key = d.toISOString().split('T')[0]
+    const mins = minsByDay[key] || 0
+    dailyData.push({
+      day: `${DAY_LABELS[d.getDay() === 0 ? 6 : d.getDay() - 1]} ${formatDate(key)}`,
+      hours: Math.round((mins / 60) * 10) / 10,
+    })
+  }
+
   function getSubjectHours(subId) {
     const total = sessions
       .filter((s) => s.subject_id === subId)
@@ -245,6 +273,10 @@ export default function Analytics() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-400 font-medium mb-1">Daily Avg since {firstDay ? formatDate(firstDay) : '—'}</p>
             <p className="text-lg font-bold text-white">{formatDuration(avgDailyMins)}</p>
+          </div>
+          <div className="bg-red-900/30 border border-red-800/50 rounded-xl p-4">
+            <p className="text-xs text-red-400 font-medium mb-1">PR {prDay ? `(${formatDate(prDay)})` : ''}</p>
+            <p className="text-lg font-bold text-white">{prMins > 0 ? formatDuration(prMins) : '—'}</p>
           </div>
           {subjects.map((sub) => (
             <div
@@ -400,6 +432,39 @@ export default function Analytics() {
 
       {hasSessions && (
         <>
+          {/* Daily hours last 14 days */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+            <h3 className="text-sm font-semibold text-gray-300 mb-4">
+              Hours Per Day (Last 2 Weeks)
+            </h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis
+                  dataKey="day"
+                  stroke="#6b7280"
+                  fontSize={11}
+                  tickLine={false}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={50}
+                />
+                <YAxis
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v}h`}
+                />
+                <Tooltip
+                  contentStyle={customTooltipStyle}
+                  formatter={(value) => [`${value} hrs`, 'Study']}
+                />
+                <Bar dataKey="hours" fill="#818cf8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
           {/* Total hours per week */}
           {weeklyTotalData.length > 0 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
